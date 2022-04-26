@@ -1,4 +1,6 @@
 using MyApplication;
+using Polly;
+using Polly.Extensions.Http;
 using Refit;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,9 +12,14 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var weatherforecastPolicy = HttpPolicyExtensions
+    .HandleTransientHttpError()
+    .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(2 * retryAttempt));
+
 builder.Services
     .AddRefitClient<IWeatherForecastApi>()
-    .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://localhost:7161"));
+    .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://localhost:7161"))
+    .AddPolicyHandler(weatherforecastPolicy);
 
 var app = builder.Build();
 
